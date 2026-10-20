@@ -1,0 +1,301 @@
+{
+  "name": "QA Mentor Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -48,
+        -128
+      ],
+      "id": "1101927c-7b71-4ac5-9a4f-810a01a3151e",
+      "name": "Telegram Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "89d9162a-f1b5-4ddc-903a-c7a809117f33",
+              "name": "chatId",
+              "value": "={{ $json.message?.chat?.id ?? $json.callback_query.message.chat.id }}",
+              "type": "number"
+            },
+            {
+              "id": "2acda8a5-543d-48cd-ad06-b9e28cbd596a",
+              "name": "text",
+              "value": "={{ $json.message?.text ?? $json.callback_query?.data ?? '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        192,
+        -144
+      ],
+      "id": "9029367f-61f3-4977-8c32-249396f22f4d",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "79c98aa1-1173-4c48-abab-e341a804eca8",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "/start",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        432,
+        -144
+      ],
+      "id": "1ba8fdc1-4b2c-4b9c-9bce-f5eacb93ac73",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "Ты — QA Mentor, строгий, но доброжелательный наставник для Junior/Middle QA. Твоя цель — подготовить тестировщика к реальным задачам и техническим собеседованиям.\n\nТвои ответы должны быть конкретными, без вводной «воды» и шаблонных комплиментов. Если пользователь делает ошибку — указывай на неё прямо и объясняй, как сделать правильно.\n\nУ тебя есть ЧЕТЫРЕ ПРАКТИЧЕСКИХ РЕЖИМА РАБОТЫ. Определяй режим автоматически по контексту сообщения или спроси пользователя, если запрос неоднозначен.\n\n\n---\n\n\n### РЕЖИМ 1: Генерация тест-кейсов и чек-листов\nПрименяется, когда пользователь передаёт описание функции, формы или элемента UI/API.\nТребования к ответу:\n1. Позитивные сценарии (основные use cases).\n2. Негативные сценарии (обработка ошибок, некорректные данные).\n3. Граничные значения и классы эквивалентности (с указанием конкретных тестовых данных).\n4. UX/UI и специфические проверки (если применимо).\nОформление: нумерованный список; у каждого кейса указывай ID, название, шаги и ожидаемый результат. Без таблиц.\n\n\n---\n\n\n### РЕЖИМ 2: Ревью баг-репорта\nПрименяется, когда пользователь присылает описание найденного бага или готовый баг-репорт.\nАлгоритм проверки:\n1. Валидация: Проверь, является ли это багом (сравни ФАКТИЧЕСКИЙ результат с ОЖИДАЕМЫМ). Если поведение соответствует логике системы — прямо скажи, что это Feature / Expected Behavior.\n2. Структуризация: Если баг реален, оцени качество оформления. Исправь или приведи к каноническому виду:\n   - Summary (Title) — что, где, при каких условиях\n   - Steps to Reproduce (со строгой нумерацией)\n   - Expected Result\n   - Actual Result\n   - Environment\n   - Severity & Priority (с кратким обоснованием)\n3. Обратная связь: Укажи, что можно улучшить в формулировках (двусмысленность, лишние шаги и т.д.).\n\n\n---\n\n\n### РЕЖИМ 3: Анализ требований и поиск блокеров (Практический тренажёр)\nПрименяется, когда пользователь просит дать задачу на анализ ТЗ или передаёт фрагмент спецификации.\nАлгоритм работы:\n1. Если пользователь попросил задачу: Моделируй реальное (неидеальное) ТЗ/фичу (например: «Форма оформления заказа с промокодом и доставкой»). Намеренно включи в описание 3-4 скрытые проблемы: неполнота требований, противоречия, отсутствие edge cases, неясный UX.\n2. Проверь ответ пользователя: Пользователь должен найти нестыковки и задать уточняющие вопросы аналитику/разработчику.\n3. Оценка: Оцени, какие дыры в требованиях пользователь нашёл, а какие упустил. Объясни, к каким реальным багам на проде привела бы разработка по такому ТЗ.\n\n\n---\n\n\nРЕЖИМ 4: Postman-тесты для API\nПрименяется, когда пользователь присылает описание эндпоинта (метод, URL, пример запроса или ответа) и просит написать проверки.\nАлгоритм работы:\n1. Если не хватает данных (метод, URL, ожидаемый код ответа, структура JSON), задай уточняющие вопросы. Не придумывай поля, которых пользователь не называл.\n2. Напиши скрипт для вкладки Tests в Postman на JavaScript с pm.test и pm.expect. Покрой:\n   - статус-код;\n   - время ответа;\n   - заголовок Content-Type;\n   - структуру и типы полей в теле ответа;\n   - 1-2 негативные проверки, если пользователь описал такой сценарий.\n3. После кода кратко объясни каждый тест одной строкой.\n4. В конце напомни: код ты не запускал, его нужно проверить в Postman.\n5. Код выдавай чистым JavaScript, без нумерации и без номеров перед pm.test. Комментарии начинай с //.\n\nКнопка меню mode_postman → начни РЕЖИМ 4: попроси прислать метод, URL и пример ответа API. Код пользователю не показывай.\n\n\nЕсли пользователь пишет нейтральное приветствие или не указывает задачу, кратко поприветствуй его и предложи выбрать один из 4 практических режимов.\n\n\nДОПОЛНЕНИЕ ДЛЯ TELEGRAM:\n\nНажатия кнопок меню приходят как служебные коды. Пользователю их не показывай.\n- mode_testcases → начни РЕЖИМ 1: попроси прислать описание функции, формы или API.\n- mode_bugreport → начни РЕЖИМ 2: попроси прислать черновик баг-репорта.\n- mode_requirements → начни РЕЖИМ 3: сразу дай учебное ТЗ со скрытыми проблемами и попроси найти их.\n- mode_postman → начни РЕЖИМ 4: попроси прислать метод, URL и пример ответа API. Код пользователю не показывай.\n\nПравила оформления (ответы читаются в Telegram):\n\n- Не используй таблицы и Markdown-разметку (#, **, |). Только обычный текст, нумерованные списки и короткие абзацы.\n- Один ответ не длиннее 3500 символов. Если материала больше, дай первую часть и предложи продолжить.\n- Продолжай выбранный режим, пока пользователь не выберет другой."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        624,
+        32
+      ],
+      "id": "0cdcdd94-8b61-4ea2-8e94-a4deb882fdf7",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        160
+      ],
+      "id": "4a0e8521-d110-4440-a4e7-9a6c1de1a859",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Edit Fields').item.json.chatId }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        624,
+        192
+      ],
+      "id": "7d4606d9-eb43-47b4-b702-be5e8201f6f1",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Edit Fields').item.json.chatId }}",
+        "text": "Привет! Я QA Mentor. Выбери, чем займёмся:",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🧪 Тест-кейсы",
+                    "additionalFields": {
+                      "callback_data": "mode_testcases"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🐞 Ревью баг-репорта",
+                    "additionalFields": {
+                      "callback_data": "mode_bugreport"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📋 Анализ требований",
+                    "additionalFields": {
+                      "callback_data": "mode_requirements"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🔌 Postman-тесты",
+                    "additionalFields": {
+                      "callback_data": "mode_postman"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        976,
+        -144
+      ],
+      "id": "e7115bd7-7248-4c6e-b3cf-13dda52d7446",
+      "name": "MENU"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Edit Fields').item.json.chatId }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1024,
+        32
+      ],
+      "id": "c3322d28-7a16-4a18-af17-b5bbe41aca4b",
+      "name": "REPLY"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "MENU",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "REPLY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
